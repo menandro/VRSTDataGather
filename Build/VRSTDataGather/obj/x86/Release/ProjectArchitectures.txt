@@ -1,0 +1,2 @@
+D:\dev\unity\VRSTDataGather\Build\GeneratedProjects\UWP\Assembly-CSharp\Assembly-CSharp.csproj;x86
+D:\dev\unity\VRSTDataGather\Build\VRSTDataGather\VRSTDataGather.csproj;x86
