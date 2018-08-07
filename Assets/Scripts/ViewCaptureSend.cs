@@ -44,9 +44,10 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
 
     private bool shouldCapture = false;
     private bool shouldSend = false;
+    private bool shouldWrite = false;
     private bool isWritingFile = false;
     int frameCounter = 0;
-    int maxFrame = 200;
+    int maxFrame = 120;
     int fileCounter = 0;
     int maxFileCounter = 300;
     string sceneDepthFilename = "scenedepth";
@@ -73,6 +74,10 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
     Color32[] colors;
     byte[] colorBytes;
 
+    MemoryStream depthMs;
+    MemoryStream positionMs;
+    MemoryStream webcamMs;
+
 #if UNITY_EDITOR
     private bool isCapturing = false;
     private bool isSaved = false;
@@ -88,6 +93,10 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
     // Use this for initialization
     void Start()
     {
+        positionMs = new MemoryStream();
+        depthMs = new MemoryStream();
+        webcamMs = new MemoryStream();
+
         tf = this.transform;
 
         TryConnect();
@@ -98,7 +107,9 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
         keywords.Add("capture", () => { StartCapture(); });
         keywords.Add("send", () => { StartSend(); });
         keywords.Add("stop", () => { StopSend(); });
-        
+        keywords.Add("write", () => { StartWrite(); });
+        keywords.Add("brown", () => { SaveToFile(); });
+
         keywordRecognizer = new KeywordRecognizer(keywords.Keys.ToArray());
         keywordRecognizer.OnPhraseRecognized += KeywordRecognizer_OnPhraseRecognized;
 #endif
@@ -148,6 +159,7 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
 #if !UNITY_EDITOR
         keywordRecognizer.Start();
 #endif
+        Debug.Log("Initialized.");
     }
 
     public async void TryConnect()
@@ -155,11 +167,12 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
         await dataReceiver.Connect(ip_addr, port);
     }
 
-    private void OnRenderImage(RenderTexture source, RenderTexture destination)
+    void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
+        copyCamera.CopyFrom(thisCamera);
+
         if (shouldCapture)
         {
-            copyCamera.CopyFrom(thisCamera);
             copyCamera.targetTexture = sceneDepthTexture;
             RenderTexture.active = sceneDepthTexture;
             copyCamera.cullingMask = 1 << SpatialMapLayer;
@@ -195,6 +208,7 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
             shouldCapture = false;
             frameCounter++;
         }
+
         if (shouldSend && (fileCounter < maxFileCounter) && (frameCounter < maxFrame) && (webcamTexture.isPlaying))
         {
             SendPositionData();
@@ -216,8 +230,67 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
 
             frameCounter++;
         }
+
+        if (shouldWrite && (fileCounter < maxFileCounter) && (frameCounter < maxFrame) && (webcamTexture.isPlaying))
+        {
+            AddPositionData();
+
+            copyCamera.CopyFrom(thisCamera);
+            copyCamera.targetTexture = sceneDepthTexture;
+            RenderTexture.active = sceneDepthTexture;
+            copyCamera.cullingMask = 1 << SpatialMapLayer;
+            copyCamera.Render();
+            Graphics.Blit(source, destination, sceneDepthMaterial);
+            screenGrab.ReadPixels(screenRect, 0, 0);
+            colors = screenGrab.GetPixels32();
+            AddDepthData();
+
+            Graphics.Blit(source, destination, webcamMaterial);
+            screenGrab.ReadPixels(screenRect, 0, 0);
+            colors = screenGrab.GetPixels32();
+            AddRgbData();
+
+            frameCounter++;
+        }
         //RenderTexture.active = null;
         Graphics.Blit(source, destination, material);
+    }
+
+    private void AddPositionData()
+    {
+        positionMs.Write(BitConverter.GetBytes(tf.position.x), 0, 4);
+        positionMs.Write(BitConverter.GetBytes(tf.position.y), 0, 4);
+        positionMs.Write(BitConverter.GetBytes(tf.position.z), 0, 4);
+
+        positionMs.Write(BitConverter.GetBytes(tf.rotation.w), 0, 4);
+        positionMs.Write(BitConverter.GetBytes(tf.rotation.x), 0, 4);
+        positionMs.Write(BitConverter.GetBytes(tf.rotation.y), 0, 4);
+        positionMs.Write(BitConverter.GetBytes(tf.rotation.z), 0, 4);
+    }
+
+    private void AddDepthData()
+    {
+        for (int j = 0; j < Screen.height; j += 2)
+        {
+            for (int i = 0; i < Screen.width; i += 2)
+            {
+                depthMs.WriteByte(colors[j * Screen.width + i].r);
+                //dataReceiver.SendByte(colors[j * Screen.width + i].r);
+            }
+        }
+    }
+
+    private void AddRgbData()
+    {
+        for (int j = 0; j < Screen.height; j += 2)
+        {
+            for (int i = 0; i < Screen.width; i += 2)
+            {
+                webcamMs.WriteByte(colors[j * Screen.width + i].r);
+                webcamMs.WriteByte(colors[j * Screen.width + i].g);
+                webcamMs.WriteByte(colors[j * Screen.width + i].b);
+            }
+        }
     }
 
     private void SendData()
@@ -318,6 +391,12 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
     }
 #endif
 
+    private void StartWrite()
+    {
+        Debug.Log("Started writing.");
+        shouldWrite = true;
+    }
+
     private void StartCapture()
     {
         Debug.Log("Screen shot.");
@@ -332,8 +411,18 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
 
     private void StopSend()
     {
-        Debug.Log("Stopped sending.");
+        Debug.Log("Stopped sending/writing.");
         shouldSend = false;
+        shouldWrite = false;
+    }
+
+    private void SaveToFile()
+    {
+        DateTime time = DateTime.Now;
+        timeStamp = string.Format("{0:D2}{1:D2}{2:D2}{3:D2}", time.Day, time.Hour, time.Minute, time.Second);
+        WriteToFile(positionMs.ToArray(), "position", frameCounter);
+        WriteToFile(depthMs.ToArray(), sceneDepthFilename, frameCounter);
+        WriteToFile(webcamMs.ToArray(), webcamFilename, frameCounter);
     }
 
     // Update is called once per frame
@@ -351,6 +440,14 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
         if (Input.GetKeyUp(KeyCode.V))
         {
             StopSend();
+        }
+        if (Input.GetKeyUp(KeyCode.W))
+        {
+            StartWrite();
+        }
+        if (Input.GetKeyUp(KeyCode.S))
+        {
+            SaveToFile();
         }
 #endif
     }
