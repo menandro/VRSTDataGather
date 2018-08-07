@@ -130,6 +130,26 @@ public class SocketClient
         }
     }
 
+    public void SendByte(byte data)
+    {
+        if (_connected)
+        {
+            streamOut.WriteByte(data);
+            streamOut.Flush();
+        }
+    }
+
+    public void SendFloat(float value)
+    {
+        if (_connected)
+        {
+            byte[] byteArray = BitConverter.GetBytes(value);
+            streamOut.Write(byteArray, 0, 4);
+            streamOut.Flush();
+        }
+    }
+
+
     public void SendBytes(byte[] bytes)
     {
         if (_connected)

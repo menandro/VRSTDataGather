@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 public class DebugToServer : MonoBehaviour
 {
-    private string ip_addr = "192.168.1.120";
+    private string ip_addr = "192.168.1.125";
     private string port = "12345";
 
     public static SocketClient Log = new SocketClient();

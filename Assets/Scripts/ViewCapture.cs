@@ -16,8 +16,10 @@ public class ViewCapture : MonoBehaviour//, IInputClickHandler
 {
     AudioSource audioData;
 
+#if !UNITY_EDITOR
     KeywordRecognizer keywordRecognizer;
     Dictionary<string, System.Action> keywords = new Dictionary<string, System.Action>();
+#endif
 
     public Material material;
     //public Material cgDepthMaterial;
@@ -35,7 +37,8 @@ public class ViewCapture : MonoBehaviour//, IInputClickHandler
     private Camera copyCamera;
     private GameObject copyCameraGameObject;
 
-    private bool shouldCapture = false;
+    //private bool shouldCapture = false;
+    private bool shouldRecord = false;
     private bool isWritingFile = false;
     int frameCounter = 0;
     int maxFrame = 20;
@@ -91,11 +94,15 @@ public class ViewCapture : MonoBehaviour//, IInputClickHandler
     void Start()
     {
         audioData = GetComponent<AudioSource>();
+
+#if !UNITY_EDITOR
+        keywords.Add("capture", () => { StartCapture(); });
         keywords.Add("record", () => { StartRecord(); });
         keywords.Add("stop", () => { StopRecord(); });
-
+        
         keywordRecognizer = new KeywordRecognizer(keywords.Keys.ToArray());
         keywordRecognizer.OnPhraseRecognized += KeywordRecognizer_OnPhraseRecognized;
+#endif
 
 
 #if UNITY_EDITOR
@@ -108,9 +115,11 @@ public class ViewCapture : MonoBehaviour//, IInputClickHandler
         DateTime time = DateTime.Now;
         timeStamp = string.Format("{0:D2}{1:D2}{2:D2}{3:D2}", time.Day, time.Hour, time.Minute, time.Second);
         Debug.Log(timeStamp);
+        DebugToServer.Log.Send(timeStamp);
 
         webcamTexture = new WebCamTexture(896, 504);
         webcamTexture.Play();
+        DebugToServer.Log.Send("Camera started");
 
         thisCamera = this.gameObject.GetComponent<Camera>();
         copyCameraGameObject = new GameObject("Depth Renderer Camera");
@@ -148,12 +157,14 @@ public class ViewCapture : MonoBehaviour//, IInputClickHandler
         webcamHandle = GCHandle.Alloc(webcamColor32, GCHandleType.Pinned);
         webcamPtr = webcamHandle.AddrOfPinnedObject();
 
+#if !UNITY_EDITOR
         keywordRecognizer.Start();
+#endif
     }
 
     private void OnRenderImage(RenderTexture source, RenderTexture destination)
     {
-        if (shouldCapture && (fileCounter < maxFileCounter) && (frameCounter < maxFrame) && (webcamTexture.isPlaying))
+        if (shouldRecord && (fileCounter < maxFileCounter) && (frameCounter < maxFrame) && (webcamTexture.isPlaying))
         {
             copyCamera.CopyFrom(thisCamera);
             copyCamera.targetTexture = sceneDepthTexture;
@@ -163,6 +174,7 @@ public class ViewCapture : MonoBehaviour//, IInputClickHandler
             Graphics.Blit(source, destination, sceneDepthMaterial);
             screenGrab.ReadPixels(screenRect, 0, 0);
             sceneDepthColor32 = screenGrab.GetPixels32();
+            //Send datas
             AddToStream(sceneDepthMs, sceneDepthPtr, sceneDepthColorBytes);
             //AddSceneDepthToStream();
 
@@ -234,6 +246,7 @@ public class ViewCapture : MonoBehaviour//, IInputClickHandler
         audioData.Play(0);
     }
 
+#if !UNITY_EDITOR
     private void KeywordRecognizer_OnPhraseRecognized(PhraseRecognizedEventArgs args)
     {
         System.Action keywordAction;
@@ -243,15 +256,21 @@ public class ViewCapture : MonoBehaviour//, IInputClickHandler
             keywordAction.Invoke();
         }
     }
+#endif
+
+    private void StartCapture()
+    {
+
+    }
 
     private void StartRecord()
     {
-        shouldCapture = true;
+        shouldRecord = true;
     }
 
     private void StopRecord()
     {
-        shouldCapture = false;
+        shouldRecord = false;
         //Write to file
         SaveToFile(sceneDepthMs.ToArray(), sceneDepthFilename, frameCounter);
         SaveToFile(webcamMs.ToArray(), webcamFilename, frameCounter);
@@ -270,7 +289,7 @@ public class ViewCapture : MonoBehaviour//, IInputClickHandler
         else if ((frameCounter == 20) && (isCapturing))
         {
             Debug.Log("Stopped");
-            shouldCapture = false;
+            shouldRecord = false;
             isCapturing = false;
         }
 

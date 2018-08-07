@@ -310,6 +310,10 @@ Prefab:
       propertyPath: RoomModel
       value: 
       objectReference: {fileID: 100002, guid: 1161d8e79043b5340a2f1e6da8ebf76d, type: 3}
+    - target: {fileID: 1000010302963436, guid: 2ed75ffdf9031c94e8bce4b3d17b9928, type: 2}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2ed75ffdf9031c94e8bce4b3d17b9928, type: 2}
   m_IsPrefabAsset: 0
@@ -374,10 +378,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 1470206624}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4066885825bd944479546b4619e81f67, type: 3}
+  m_Script: {fileID: 11500000, guid: f605b72def1f65a42beb012a692d2503, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   material: {fileID: 2100000, guid: 3f00e127d8b121b4282e518dae01292c, type: 2}
+  cgDepthMaterial: {fileID: 2100000, guid: c6843aea6f1aaea45b634ed2c1b0f8ef, type: 2}
+  cgColorMaterial: {fileID: 2100000, guid: 8d7172ab96c66b349b084a648cd3ad0e, type: 2}
   sceneDepthMaterial: {fileID: 2100000, guid: 5e2976e49e2047b4ca3bbb2979223b45, type: 2}
   webcamMaterial: {fileID: 2100000, guid: 6cbbae7233a8fb649afb0b0e80a72134, type: 2}
   SpatialMapLayer: 9
@@ -580,7 +586,7 @@ Prefab:
     - target: {fileID: 20770519707920992, guid: d29bc40b7f3df26479d6a0aac211c355,
         type: 2}
       propertyPath: m_TargetEye
-      value: 3
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d29bc40b7f3df26479d6a0aac211c355, type: 2}
