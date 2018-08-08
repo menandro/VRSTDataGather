@@ -370,7 +370,7 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 1372541880982678, guid: d29bc40b7f3df26479d6a0aac211c355,
     type: 2}
   m_PrefabInternal: {fileID: 1921485913}
---- !u!114 &1470206625
+--- !u!114 &1470206626
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -378,7 +378,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1470206624}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f605b72def1f65a42beb012a692d2503, type: 3}
+  m_Script: {fileID: 11500000, guid: 67e3d43198f615949bb4a94fc4d66249, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   material: {fileID: 2100000, guid: 3f00e127d8b121b4282e518dae01292c, type: 2}
@@ -482,23 +482,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &1470206633
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 1470206624}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 83792b4a544af3344aaa9974067330e1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  material: {fileID: 2100000, guid: 3f00e127d8b121b4282e518dae01292c, type: 2}
-  cgDepthMaterial: {fileID: 2100000, guid: c6843aea6f1aaea45b634ed2c1b0f8ef, type: 2}
-  cgColorMaterial: {fileID: 2100000, guid: 8d7172ab96c66b349b084a648cd3ad0e, type: 2}
-  sceneDepthMaterial: {fileID: 2100000, guid: 5e2976e49e2047b4ca3bbb2979223b45, type: 2}
-  webcamMaterial: {fileID: 2100000, guid: 6cbbae7233a8fb649afb0b0e80a72134, type: 2}
-  SpatialMapLayer: 9
 --- !u!1001 &1828133644
 Prefab:
   m_ObjectHideFlags: 0

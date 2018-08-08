@@ -12,7 +12,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.IO;
 
-public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
+public class LongViewCapture : MonoBehaviour//, IInputClickHandler
 {
     SocketClient dataReceiver = new SocketClient();
     private string ip_addr = "192.168.1.2";
@@ -47,7 +47,7 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
     private bool shouldWrite = false;
     private bool isWritingFile = false;
     int frameCounter = 0;
-    int maxFrame = 120;
+    int maxFrame = 60;
     int fileCounter = 0;
     int maxFileCounter = 300;
     string sceneDepthFilename = "scenedepth";
@@ -78,6 +78,11 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
     MemoryStream positionMs;
     MemoryStream webcamMs;
 
+    int msCounter = 0;
+    List<MemoryStream> depthMsList;
+    List<MemoryStream> webcamMsList;
+    int maxMs = 3;
+
 #if UNITY_EDITOR
     private bool isCapturing = false;
     private bool isSaved = false;
@@ -96,6 +101,18 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
         positionMs = new MemoryStream();
         depthMs = new MemoryStream();
         webcamMs = new MemoryStream();
+
+        depthMsList = new List<MemoryStream>();
+        webcamMsList = new List<MemoryStream>();
+
+        for (int i = 0; i < maxMs; i++)
+        {
+            MemoryStream dms = new MemoryStream(15000000);
+            depthMsList.Add(dms);
+
+            MemoryStream wms = new MemoryStream(50000000);
+            webcamMsList.Add(wms);
+        }
 
         tf = this.transform;
 
@@ -231,7 +248,7 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
             frameCounter++;
         }
 
-        if (shouldWrite && (fileCounter < maxFileCounter) && (frameCounter < maxFrame) && (webcamTexture.isPlaying))
+        if (shouldWrite && (webcamTexture.isPlaying))
         {
             AddPositionData();
 
@@ -251,6 +268,16 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
             AddRgbData();
 
             frameCounter++;
+            if (frameCounter >= maxFrame)
+            {
+                msCounter++;
+                frameCounter = 0;
+            }
+            if (msCounter >= maxMs)
+            {
+                shouldWrite = false;
+                audioData.Play(0);
+            }
         }
         //RenderTexture.active = null;
         Graphics.Blit(source, destination, material);
@@ -274,8 +301,7 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
         {
             for (int i = 0; i < Screen.width; i += 2)
             {
-                depthMs.WriteByte(colors[j * Screen.width + i].r);
-                //dataReceiver.SendByte(colors[j * Screen.width + i].r);
+                depthMsList[msCounter].WriteByte(colors[j * Screen.width + i].r);
             }
         }
     }
@@ -286,9 +312,9 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
         {
             for (int i = 0; i < Screen.width; i += 2)
             {
-                webcamMs.WriteByte(colors[j * Screen.width + i].r);
-                webcamMs.WriteByte(colors[j * Screen.width + i].g);
-                webcamMs.WriteByte(colors[j * Screen.width + i].b);
+                webcamMsList[msCounter].WriteByte(colors[j * Screen.width + i].r);
+                webcamMsList[msCounter].WriteByte(colors[j * Screen.width + i].g);
+                webcamMsList[msCounter].WriteByte(colors[j * Screen.width + i].b);
             }
         }
     }
@@ -351,7 +377,7 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
             }
             dataReceiver.SendBytes(ms.ToArray());
         }
-        
+
         //dataReceiver.SendBytes(colorBytes);
     }
 
@@ -421,9 +447,22 @@ public class ViewCaptureSend : MonoBehaviour//, IInputClickHandler
     {
         DateTime time = DateTime.Now;
         timeStamp = string.Format("{0:D2}{1:D2}{2:D2}{3:D2}", time.Day, time.Hour, time.Minute, time.Second);
-        WriteToFile(positionMs.ToArray(), "position", frameCounter);
-        WriteToFile(depthMs.ToArray(), sceneDepthFilename, frameCounter);
-        WriteToFile(webcamMs.ToArray(), webcamFilename, frameCounter);
+        WriteToFile(positionMs.ToArray(), "position", maxFrame * msCounter + frameCounter);
+
+        int cnt = 0;
+        foreach (var dms in depthMsList)
+        {
+            WriteToFile(dms.ToArray(), sceneDepthFilename, cnt);
+            cnt++;
+        }
+
+        cnt = 0;
+        foreach (var wms in webcamMsList)
+        {
+            WriteToFile(wms.ToArray(), webcamFilename, cnt);
+            cnt++;
+        }
+        
     }
 
     // Update is called once per frame
